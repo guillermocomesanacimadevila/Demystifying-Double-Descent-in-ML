@@ -1,7 +1,7 @@
 #!bin/bash
 
 # Base URL for the VCF files
-BASE_URL="https://ftp.ebi.ac.uk/pub/databases/cryptic/release_june2022/reuse/"
+BASE_URL="https://ftp.ebi.ac.uk/pub/databases/cryptic/release_june2022/reproducibility/"
 
 # CSV file containing the VCF column
 CSV_FILE="vcf_drug_final.csv"
