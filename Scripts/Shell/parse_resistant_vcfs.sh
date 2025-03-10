@@ -1,4 +1,4 @@
-y#!bin/bash
+#!bin/bash
 
 # /home/jovyan/DOUBLE_DESCENT/Data
 
