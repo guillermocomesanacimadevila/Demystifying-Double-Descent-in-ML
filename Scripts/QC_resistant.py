@@ -10,7 +10,7 @@ output_dir = "/home/jovyan/DOUBLE_DESCENT/Data/downloaded_resistant/gunziped_res
 os.makedirs(output_dir, exist_ok=True)
 
 # List all 4 DNA nucleotides to filter through ALT & REF
-valid_nucleotides = {"A", "T", "C", "G"}
+valid_nucleotides = ["A", "T", "C", "G"]
 
 # Process each CSV-converted VCF within input directory
 for file in os.listdir(input_dit):
