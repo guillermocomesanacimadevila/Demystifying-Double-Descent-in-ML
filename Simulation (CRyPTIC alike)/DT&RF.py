@@ -50,8 +50,8 @@ y = df_simulated["label"]
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
 # ========== Step 3: Define Model Complexity Ranges ==========
-tree_depths = np.arange(2, 51, 2)
-ensemble_sizes = np.arange(10, 201, 10)
+tree_depths = np.arange(2, 101, 2)
+ensemble_sizes = np.arange(10, 301, 10)
 
 # Store MSE values
 dt_train_mse = []
