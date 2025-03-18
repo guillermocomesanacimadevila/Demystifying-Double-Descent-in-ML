@@ -61,35 +61,33 @@ for ens in ensemble_sizes:
     composite_test_mse.append(mean_squared_error(y_test, rf.predict(X_test)))
     x_axis_composite.append(f"E{ens}")  # Labeling for Ensemble Size
 
-# === Visualization: Multi-panel Figure with Consistent Style ===
-fig, axes = plt.subplots(1, 3, figsize=(21, 5), dpi=300)  # Create 3 panels side by side
+# === Visualization: Multi-panel Figure with Single Y-axis Label and One Legend ===
+fig, axes = plt.subplots(1, 3, figsize=(21, 5), dpi=300, sharey=True)  # Share y-axis
 
 # Panel 1: MSE vs Tree Depth (Decision Tree)
-axes[0].plot(tree_depths, dt_train_errors, label="Train Error", color="orange")
-axes[0].plot(tree_depths, dt_test_errors, label="Test Error", color="green")
+axes[0].plot(tree_depths, dt_train_errors, color="orange", label="Train Error")
+axes[0].plot(tree_depths, dt_test_errors, color="green", label="Test Error")
 axes[0].set_xlabel("Tree Depth")
-axes[0].set_ylabel("Mean Squared Error")
+axes[0].set_ylabel("Mean Squared Error")  # Only appears in the first subplot
 axes[0].set_title("Decision Tree: Depth vs MSE")
-axes[0].legend()
+
+# Display legend only in the first subplot
+axes[0].legend(loc="upper right")
 
 # Panel 2: MSE vs Ensemble Size (Random Forest)
-axes[1].plot(ensemble_sizes, rf_train_errors, label="Train Error", color="orange")
-axes[1].plot(ensemble_sizes, rf_test_errors, label="Test Error", color="green")
+axes[1].plot(ensemble_sizes, rf_train_errors, color="orange")
+axes[1].plot(ensemble_sizes, rf_test_errors, color="green")
 axes[1].set_xlabel("Number of Trees in Ensemble")
-axes[1].set_ylabel("Mean Squared Error")
 axes[1].set_title("Random Forest: Trees vs MSE")
-axes[1].legend()
 
 # Panel 3: Composite Complexity Axis (Tree Depth → Ensemble)
-axes[2].plot(range(len(x_axis_composite)), composite_train_mse, label="Train Error", color="orange", linewidth=2)
-axes[2].plot(range(len(x_axis_composite)), composite_test_mse, label="Test Error", color="green", linewidth=2)
+axes[2].plot(range(len(x_axis_composite)), composite_train_mse, color="orange", linewidth=2)
+axes[2].plot(range(len(x_axis_composite)), composite_test_mse, color="green", linewidth=2)
 
 axes[2].set_xlabel("Model Complexity (Tree Depth → Ensemble)")
-axes[2].set_ylabel("Mean Squared Error")
 axes[2].set_title("Double Descent: Depth → Ensemble")
 axes[2].set_xticks(range(0, len(x_axis_composite), max(len(x_axis_composite) // 10, 1)))
 axes[2].set_xticklabels([x_axis_composite[i] for i in range(0, len(x_axis_composite), max(len(x_axis_composite) // 10, 1))], rotation=20, ha="right", fontsize=10)
-axes[2].legend()
 
 # Adjust layout for better spacing
 plt.tight_layout()
