@@ -22,7 +22,7 @@ gb_train_errors = []
 gb_test_errors = []
 
 for rounds in boosting_rounds:
-    gb = GradientBoostingRegressor(n_estimators=rounds, max_depth=3, learning_rate=0.1, subsample=0.8, random_state=42)
+    gb = GradientBoostingRegressor(n_estimators=rounds, max_depth=3, learning_rate=0.85, subsample=0.8, random_state=42)
     gb.fit(X_train, y_train)
     y_train_pred = gb.predict(X_train)
     y_test_pred = gb.predict(X_test)
@@ -90,24 +90,24 @@ for ens in ensemble_sizes:
 fig, axes = plt.subplots(1, 3, figsize=(21, 5), dpi=300)  # Create 3 panels side by side
 
 # Panel 1: MSE vs Boosting Rounds
-axes[0].plot(boosting_rounds, gb_train_errors, label='Train Error', color='blue')
-axes[0].plot(boosting_rounds, gb_test_errors, label='Test Error', color='red')
+axes[0].plot(boosting_rounds, gb_train_errors, label='Train Error', color='orange')
+axes[0].plot(boosting_rounds, gb_test_errors, label='Test Error', color='green')
 axes[0].set_xlabel("Number of Boosting Rounds")
 axes[0].set_ylabel("Mean Squared Error")
 axes[0].set_title("Boosting Rounds vs MSE")
 axes[0].legend()
 
 # Panel 2: MSE vs Ensemble Size
-axes[1].plot(ensemble_sizes, ensemble_train_errors, label='Train Error', color='blue')
-axes[1].plot(ensemble_sizes, ensemble_test_errors, label='Test Error', color='red')
+axes[1].plot(ensemble_sizes, ensemble_train_errors, label='Train Error', color='orange')
+axes[1].plot(ensemble_sizes, ensemble_test_errors, label='Test Error', color='green')
 axes[1].set_xlabel("Number of Ensembled Models")
 axes[1].set_ylabel("Mean Squared Error")
 axes[1].set_title("Ensemble Size vs MSE")
 axes[1].legend()
 
 # Panel 3: Composite Complexity Plot
-axes[2].plot(range(len(x_axis_composite)), composite_train_mse, label="Train Error", color="blue", linewidth=2)
-axes[2].plot(range(len(x_axis_composite)), composite_test_mse, label="Test Error", color="red", linewidth=2)
+axes[2].plot(range(len(x_axis_composite)), composite_train_mse, label="Train Error", color="orange", linewidth=2)
+axes[2].plot(range(len(x_axis_composite)), composite_test_mse, label="Test Error", color="green", linewidth=2)
 
 axes[2].set_xlabel("Model Complexity (Boosting → Ensemble)")
 axes[2].set_ylabel("Mean Squared Error")
