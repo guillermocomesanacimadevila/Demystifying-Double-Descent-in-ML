@@ -24,10 +24,8 @@ gb_test_errors = []
 for rounds in boosting_rounds:
     gb = GradientBoostingRegressor(n_estimators=rounds, max_depth=3, learning_rate=0.85, subsample=0.8, random_state=42)
     gb.fit(X_train, y_train)
-    y_train_pred = gb.predict(X_train)
-    y_test_pred = gb.predict(X_test)
-    gb_train_errors.append(mean_squared_error(y_train, y_train_pred))
-    gb_test_errors.append(mean_squared_error(y_test, y_test_pred))
+    gb_train_errors.append(mean_squared_error(y_train, gb.predict(X_train)))
+    gb_test_errors.append(mean_squared_error(y_test, gb.predict(X_test)))
 
 # Experiment 2: MSE vs Ensemble Size (Fixed Boosting Rounds)
 fixed_boost = 50
@@ -86,37 +84,35 @@ for ens in ensemble_sizes:
     composite_test_mse.append(mean_squared_error(y_test, test_preds))
     x_axis_composite.append(f"E{ens}")
 
-# === Visualization: Multi-panel Figure with Consistent Style ===
-fig, axes = plt.subplots(1, 3, figsize=(21, 5), dpi=300)  # Create 3 panels side by side
+# === Visualization: Multi-panel Figure with Single Y-axis Label and One Legend ===
+fig, axes = plt.subplots(1, 3, figsize=(21, 5), dpi=300, sharey=True)  # Share y-axis
 
 # Panel 1: MSE vs Boosting Rounds
-axes[0].plot(boosting_rounds, gb_train_errors, label='Train Error', color='orange')
-axes[0].plot(boosting_rounds, gb_test_errors, label='Test Error', color='green')
+axes[0].plot(boosting_rounds, gb_train_errors, color='orange', label='Train Error')
+axes[0].plot(boosting_rounds, gb_test_errors, color='green', label='Test Error')
 axes[0].set_xlabel("Number of Boosting Rounds")
-axes[0].set_ylabel("Mean Squared Error")
+axes[0].set_ylabel("Mean Squared Error")  # Only in the first subplot
 axes[0].set_title("Boosting Rounds vs MSE")
-axes[0].legend()
+
+# Display legend only in the first subplot
+axes[0].legend(loc="upper right")
 
 # Panel 2: MSE vs Ensemble Size
-axes[1].plot(ensemble_sizes, ensemble_train_errors, label='Train Error', color='orange')
-axes[1].plot(ensemble_sizes, ensemble_test_errors, label='Test Error', color='green')
+axes[1].plot(ensemble_sizes, ensemble_train_errors, color='orange')
+axes[1].plot(ensemble_sizes, ensemble_test_errors, color='green')
 axes[1].set_xlabel("Number of Ensembled Models")
-axes[1].set_ylabel("Mean Squared Error")
 axes[1].set_title("Ensemble Size vs MSE")
-axes[1].legend()
 
 # Panel 3: Composite Complexity Plot
-axes[2].plot(range(len(x_axis_composite)), composite_train_mse, label="Train Error", color="orange", linewidth=2)
-axes[2].plot(range(len(x_axis_composite)), composite_test_mse, label="Test Error", color="green", linewidth=2)
+axes[2].plot(range(len(x_axis_composite)), composite_train_mse, color="orange", linewidth=2)
+axes[2].plot(range(len(x_axis_composite)), composite_test_mse, color="green", linewidth=2)
 
 axes[2].set_xlabel("Model Complexity (Boosting → Ensemble)")
-axes[2].set_ylabel("Mean Squared Error")
 axes[2].set_title("Double Descent: Boosting → Ensemble")
 axes[2].set_xticks(range(0, len(x_axis_composite), max(len(x_axis_composite) // 10, 1)))
 axes[2].set_xticklabels(
     [x_axis_composite[i] for i in range(0, len(x_axis_composite), max(len(x_axis_composite) // 10, 1))], rotation=20,
     ha="right", fontsize=10)
-axes[2].legend()
 
 # Adjust layout for better spacing
 plt.tight_layout()
