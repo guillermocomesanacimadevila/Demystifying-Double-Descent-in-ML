@@ -65,8 +65,8 @@ for ens in ensemble_sizes:
 fig, axes = plt.subplots(1, 3, figsize=(21, 5), dpi=300, sharey=True)  # Share y-axis
 
 # Panel 1: MSE vs Tree Depth (Decision Tree)
-axes[0].plot(tree_depths, dt_train_errors, color="orange", label="Train Error")
-axes[0].plot(tree_depths, dt_test_errors, color="green", label="Test Error")
+axes[0].plot(tree_depths, dt_train_errors, color="blue", label="Train Error")
+axes[0].plot(tree_depths, dt_test_errors, color="red", label="Test Error")
 axes[0].set_xlabel("Tree Depth")
 axes[0].set_ylabel("Mean Squared Error")  # Only appears in the first subplot
 axes[0].set_title("Decision Tree: Depth vs MSE")
@@ -75,14 +75,14 @@ axes[0].set_title("Decision Tree: Depth vs MSE")
 axes[0].legend(loc="upper right")
 
 # Panel 2: MSE vs Ensemble Size (Random Forest)
-axes[1].plot(ensemble_sizes, rf_train_errors, color="orange")
-axes[1].plot(ensemble_sizes, rf_test_errors, color="green")
+axes[1].plot(ensemble_sizes, rf_train_errors, color="blue")
+axes[1].plot(ensemble_sizes, rf_test_errors, color="red")
 axes[1].set_xlabel("Number of Trees in Ensemble")
 axes[1].set_title("Random Forest: Trees vs MSE")
 
 # Panel 3: Composite Complexity Axis (Tree Depth → Ensemble)
-axes[2].plot(range(len(x_axis_composite)), composite_train_mse, color="orange", linewidth=2)
-axes[2].plot(range(len(x_axis_composite)), composite_test_mse, color="green", linewidth=2)
+axes[2].plot(range(len(x_axis_composite)), composite_train_mse, color="blue", linewidth=2)
+axes[2].plot(range(len(x_axis_composite)), composite_test_mse, color="red", linewidth=2)
 
 axes[2].set_xlabel("Model Complexity (Tree Depth → Ensemble)")
 axes[2].set_title("Double Descent: Depth → Ensemble")
