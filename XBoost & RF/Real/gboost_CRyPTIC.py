@@ -48,7 +48,7 @@ y = data["label"]
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
 # Experiment 1: MSE vs Boosting Rounds
-boosting_rounds = list(range(10, 300, 20))
+boosting_rounds = list(range(10, 301, 10))
 gb_train_errors = []
 gb_test_errors = []
 
@@ -61,7 +61,7 @@ for n in boosting_rounds:
 
 # Experiment 2: MSE vs Ensemble Size (Boosting as Ensemble)
 fixed_boost = 50
-ensemble_sizes = [1, 2, 5, 10, 20, 50]
+ensemble_sizes = [1, 2, 5, 10, 20, 50, 80, 100]
 ensemble_train_errors = []
 ensemble_test_errors = []
 
