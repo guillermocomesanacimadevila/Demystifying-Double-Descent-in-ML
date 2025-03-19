@@ -29,7 +29,7 @@ for rounds in boosting_rounds:
 
 # Experiment 2: MSE vs Ensemble Size (Fixed Boosting Rounds)
 fixed_boost = 50
-ensemble_sizes = [1, 2, 5, 10, 20, 50]
+ensemble_sizes = [1, 2, 5, 10, 20, 50, 80, 100]
 ensemble_train_errors = []
 ensemble_test_errors = []
 
