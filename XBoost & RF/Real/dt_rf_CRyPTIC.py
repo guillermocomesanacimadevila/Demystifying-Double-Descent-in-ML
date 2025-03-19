@@ -61,7 +61,7 @@ for depth in tree_depths:
 
 # Experiment 2: MSE vs Ensemble Size (Random Forest)
 fixed_depth = max(tree_depths)  # Fix tree depth at max depth
-ensemble_sizes = [1, 2, 5, 10, 20, 50]
+ensemble_sizes = [1, 2, 5, 10, 20, 50, 80, 100]
 rf_train_errors = []
 rf_test_errors = []
 
