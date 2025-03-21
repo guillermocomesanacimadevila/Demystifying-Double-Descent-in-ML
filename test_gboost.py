@@ -22,7 +22,7 @@ X = np.random.rand(n_samples, n_features)
 y = np.sin(2 * np.pi * X[:, 0]) + np.log(X[:, 1] + 1) + 0.5 * np.random.randn(n_samples)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
-# Experiment 1: Error vs Boosting Rounds (Fixed Ensemble Size = 1)
+# --- Experiment 1: Error vs Boosting Rounds ---
 boosting_rounds = np.linspace(1, 300, 20, dtype=int)
 ensemble_sizes_fixed = [1, 5, 10, 50]
 boosting_test_errors = {ens: [] for ens in ensemble_sizes_fixed}
@@ -38,7 +38,7 @@ for rounds in boosting_rounds:
         avg_preds = np.mean(preds, axis=0)
         boosting_test_errors[ens].append(mean_squared_error(y_test, avg_preds))
 
-# Experiment 2: Error vs Ensemble Size (Fixed Boosting Rounds)
+# --- Experiment 2: Error vs Ensemble Size ---
 ensemble_sizes = np.linspace(1, 100, 15, dtype=int)
 fixed_boosting_rounds = [20, 50, 100, 200]
 ensemble_test_errors = {boost: [] for boost in fixed_boosting_rounds}
@@ -54,7 +54,7 @@ for ens in ensemble_sizes:
         avg_preds = np.mean(preds, axis=0)
         ensemble_test_errors[boost].append(mean_squared_error(y_test, avg_preds))
 
-# Composite Axis: Boosting Rounds → Ensembling
+# --- Composite Axis: Boosting Rounds → Ensembling ---
 composite_test_errors = []
 composite_x_labels = []
 
@@ -80,34 +80,34 @@ for ens in ensemble_sizes:
 
 interpolation_idx = np.argmax(composite_test_errors)
 
-# Visualization
-fig, axes = plt.subplots(1, 3, figsize=(18, 5), dpi=300, sharey=True)
+# --- Visualisations ---
+fig, axes = plt.subplots(1, 3, figsize=(18, 5), dpi=300, sharey=True, gridspec_kw={'width_ratios': [1, 1, 1.2]})
 
-# Panel 1: Error by Boosting Rounds
+# Panel 1: Boosting Rounds
 colors = ["#4C72B0", "#55A868", "#C44E52", "#8172B2"]
 for i, ens in enumerate(ensemble_sizes_fixed):
-    axes[0].plot(boosting_rounds, boosting_test_errors[ens], label=f"Trees={ens}", color=colors[i], linewidth=2)
+    axes[0].plot(boosting_rounds, boosting_test_errors[ens], color=colors[i], linewidth=2, label=f"Trees={ens}")
 axes[0].set_title("Error by Boosting Rounds (Fixed Trees)")
 axes[0].set_xlabel("Boosting Rounds")
 axes[0].set_ylabel("MSE")
 axes[0].legend()
 
-# Panel 2: Error by Ensemble Size
+# Panel 2: Ensemble Size
 colors = ["#DD8452", "#55A868", "#C44E52", "#8172B2"]
 for i, boost in enumerate(fixed_boosting_rounds):
-    axes[1].plot(ensemble_sizes, ensemble_test_errors[boost], label=f"Boosting={boost}", color=colors[i], linewidth=2)
+    axes[1].plot(ensemble_sizes, ensemble_test_errors[boost], color=colors[i], linewidth=2, label=f"Boosting={boost}")
 axes[1].set_title("Error by Ensemble Size (Fixed Boosting)")
 axes[1].set_xlabel("Number of Trees")
 axes[1].legend()
 axes[1].set_yticklabels([])
 
-# Panel 3: Continuous Test Error Line
+# Panel 3: Composite
 axes[2].plot(range(len(composite_test_errors)), composite_test_errors, color='black', linewidth=2, label="Test Error")
-axes[2].axvline(interpolation_idx, linestyle='--', color='red', linewidth=2, label='Interpolation Threshold')
+axes[2].axvline(interpolation_idx, linestyle='--', color='black', linewidth=2, label='Interpolation Threshold')
 axes[2].set_title("Double Descent in Boosting")
 axes[2].set_xlabel("Boosting Rounds → Ensembling")
-axes[2].set_xticks(range(0, len(composite_x_labels), max(len(composite_x_labels)//10, 1)))
-axes[2].set_xticklabels([composite_x_labels[i] for i in range(0, len(composite_x_labels), max(len(composite_x_labels)//10, 1))], rotation=20, ha="right")
+axes[2].set_xticks(range(0, len(composite_x_labels), max(len(composite_x_labels)//6, 1)))
+axes[2].set_xticklabels([composite_x_labels[i] for i in range(0, len(composite_x_labels), max(len(composite_x_labels)//6, 1))], rotation=20, ha="right", fontsize=10)
 axes[2].legend()
 axes[2].set_yticklabels([])
 
