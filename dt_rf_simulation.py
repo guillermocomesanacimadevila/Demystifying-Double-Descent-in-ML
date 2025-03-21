@@ -8,7 +8,6 @@ from sklearn.metrics import mean_squared_error
 # Set global style for professional appearance
 plt.rcParams.update({
     "font.family": "serif",
-    "text.usetex": True,
     "axes.titlesize": 14,
     "axes.labelsize": 12,
     "xtick.labelsize": 10,
