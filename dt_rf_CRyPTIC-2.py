@@ -2,23 +2,27 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
+from scipy.ndimage import gaussian_filter1d
+from collections import OrderedDict
 
-# Set global plot style
+# --- Plotting style ---
 plt.rcParams.update({
     "font.family": "serif",
-    "axes.titlesize": 14,
-    "axes.labelsize": 12,
-    "xtick.labelsize": 10,
-    "ytick.labelsize": 10,
-    "legend.fontsize": 10
+    "font.serif": ["Times New Roman"],
+    "axes.titlesize": 16,
+    "axes.labelsize": 14,
+    "legend.fontsize": 12,
+    "xtick.labelsize": 12,
+    "ytick.labelsize": 12,
+    "lines.linewidth": 2,
+    "lines.markersize": 6
 })
 
-# === Load and preprocess CRyPTIC data === #
-
+# === Load and preprocess CRyPTIC data ===
 susceptible_dir = "/home/jovyan/DOUBLE_DESCENT/Data/downloaded_susceptible/gunziped_susceptible/csv_susceptible/post_QC_susceptible"
 resistant_dir = "/home/jovyan/DOUBLE_DESCENT/Data/downloaded_resistant/gunziped_resistant/csv_converted/post_QC_resistant"
 
@@ -32,107 +36,151 @@ def extract_features_from_csv(file_path):
     df["GT_CONF"] = pd.to_numeric(df["GT_CONF"], errors="coerce").fillna(0)
     return df[["POS", "GT", "DP", "GT_CONF"]]
 
-# Process all CSVs within the susceptible and resistant directories
+# Load data
 susceptible_data = [extract_features_from_csv(os.path.join(susceptible_dir, file))
                     for file in os.listdir(susceptible_dir) if file.endswith(".csv")]
-
 susceptible_df = pd.concat(susceptible_data, ignore_index=True)
 susceptible_df["label"] = 0
 
 resistant_data = [extract_features_from_csv(os.path.join(resistant_dir, file))
                   for file in os.listdir(resistant_dir) if file.endswith(".csv")]
-
 resistant_df = pd.concat(resistant_data, ignore_index=True)
 resistant_df["label"] = 1
 
-# Split into X & y
+# Combine and split
 data = pd.concat([susceptible_df, resistant_df], ignore_index=True).dropna()
 X = data.drop(columns=["label"])
 y = data["label"]
+X_train, X_test, y_train, y_test = train_test_split(X, y, stratify=y, test_size=0.3, random_state=42)
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+# Add label noise
+y_train_noisy = y_train.copy()
+n_noise = int(0.1 * len(y_train_noisy))
+flip_indices = np.random.choice(len(y_train_noisy), size=n_noise, replace=False)
+y_train_noisy.iloc[flip_indices] = 1 - y_train_noisy.iloc[flip_indices]
 
-# === Experiment 1: MSE vs Leaf Nodes per Tree === #
-leaf_nodes = np.linspace(2, 200, 15, dtype=int)
-ensemble_sizes_fixed = [1, 5, 10, 50]
-dt_test_errors = {ens: [] for ens in ensemble_sizes_fixed}
+def evaluate(model):
+    model.fit(X_train, y_train_noisy)
+    y_pred = model.predict(X_test)
+    return mean_squared_error(y_test, y_pred)
 
-for leaves in leaf_nodes:
-    for ens in ensemble_sizes_fixed:
-        rf = RandomForestRegressor(n_estimators=ens, max_leaf_nodes=leaves, random_state=42)
-        rf.fit(X_train, y_train)
-        dt_test_errors[ens].append(mean_squared_error(y_test, rf.predict(X_test)))
+# --- Experiment 1: Double Descent Composite Curves ---
+P_leaf_max_values = [50, 100, 200, 500]
+P_ens_values = [1, 2, 5, 10, 20, 50]
+all_possible_leaf_sizes = [2, 5, 10, 20, 50, 100, 200, 500]
 
-# === Experiment 2: MSE vs Ensemble Size === #
-ensemble_sizes = np.linspace(1, 100, 15, dtype=int)
-tree_depths_fixed = [10, 20, 50, 100]
-rf_test_errors = {depth: [] for depth in tree_depths_fixed}
+all_curves = OrderedDict()
+x_label_master = {}
 
-for ens in ensemble_sizes:
-    for depth in tree_depths_fixed:
-        rf = RandomForestRegressor(n_estimators=ens, max_leaf_nodes=depth, random_state=42)
-        rf.fit(X_train, y_train)
-        rf_test_errors[depth].append(mean_squared_error(y_test, rf.predict(X_test)))
+for P_leaf_max in P_leaf_max_values:
+    curve_errors = []
+    curve_labels = []
+    leaf_sizes = [l for l in all_possible_leaf_sizes if l <= P_leaf_max]
 
-# === Composite Transition: Depth → Ensembling === #
-composite_leaf_nodes = np.linspace(2, 100, 20, dtype=int)
-composite_ensemble_sizes = np.linspace(1, 100, 15, dtype=int)
-composite_test_errors = []
+    for leaf in leaf_sizes:
+        model = DecisionTreeRegressor(max_leaf_nodes=leaf, random_state=42)
+        err = evaluate(model)
+        curve_errors.append(err)
+        curve_labels.append(f"L:{leaf}")
 
-for leaves in composite_leaf_nodes:
-    tree = DecisionTreeRegressor(max_leaf_nodes=leaves, random_state=42)
-    tree.fit(X_train, y_train)
-    composite_test_errors.append(mean_squared_error(y_test, tree.predict(X_test)))
+    for n_ens in P_ens_values:
+        model = RandomForestRegressor(n_estimators=n_ens, max_leaf_nodes=P_leaf_max,
+                                      bootstrap=False, random_state=42, n_jobs=-1)
+        err = evaluate(model)
+        curve_errors.append(err)
+        curve_labels.append(f"RF:{n_ens}")
 
-for ens in composite_ensemble_sizes:
-    forest = RandomForestRegressor(n_estimators=ens, max_leaf_nodes=200, random_state=42)
-    forest.fit(X_train, y_train)
-    composite_test_errors.append(mean_squared_error(y_test, forest.predict(X_test)))
+    smoothed = gaussian_filter1d(curve_errors, sigma=1)
+    all_curves[P_leaf_max] = smoothed
+    x_label_master[P_leaf_max] = curve_labels
 
-interpolation_idx = np.argmax(composite_test_errors)
+# === Plot Composite Double Descent Curves ===
+styles = {
+    50: {'linestyle': '--', 'marker': 'o', 'color': 'tab:blue'},
+    100: {'linestyle': '-.', 'marker': 's', 'color': 'tab:orange'},
+    200: {'linestyle': ':', 'marker': '^', 'color': 'tab:green'},
+    500: {'linestyle': '-', 'marker': 'D', 'color': 'tab:red'},
+}
 
-# === Visualisation === #
-# === Two-Panel Figure: Leaf Nodes & Ensemble Size === #
-fig, axes = plt.subplots(1, 2, figsize=(14, 5), dpi=300, sharey=True)
+fig, ax = plt.subplots(figsize=(14, 7))
+for P_leaf_max, smoothed in all_curves.items():
+    labels = x_label_master[P_leaf_max]
+    style = styles[P_leaf_max]
+    interp_index = len([l for l in all_possible_leaf_sizes if l <= P_leaf_max]) - 1
+    legend_label = rf"$P_{{\mathrm{{leaf}}}}$ = {P_leaf_max}"
 
-# Panel 1: Error vs Leaf Nodes
-colors = ["#4C72B0", "#55A868", "#C44E52", "#8172B2"]
-for i, ens in enumerate(ensemble_sizes_fixed):
-    axes[0].plot(leaf_nodes, dt_test_errors[ens], color=colors[i], linewidth=2, label=f"Trees={ens}")
-axes[0].set_title("Error by Leaf Nodes (Fixed Trees)")
-axes[0].set_xlabel("Number of Leaf Nodes")
-axes[0].set_ylabel("MSE")
-axes[0].legend()
+    ax.plot(range(len(labels)), smoothed, label=legend_label,
+            linestyle=style['linestyle'], marker=style['marker'],
+            color=style['color'], linewidth=2, markersize=6)
 
-# Panel 2: Error vs Ensemble Size
-colors = ["#DD8452", "#55A868", "#C44E52", "#8172B2"]
-for i, depth in enumerate(tree_depths_fixed):
-    axes[1].plot(ensemble_sizes, rf_test_errors[depth], color=colors[i], linewidth=2, label=f"Depth={depth}")
-axes[1].set_title("Error by Ensemble Size (Fixed Depth)")
-axes[1].set_xlabel("Number of Trees")
-axes[1].legend()
-axes[1].set_yticklabels([])
+    ax.axvline(x=interp_index, linestyle='dotted', color=style['color'], linewidth=1.5, alpha=0.7)
 
+longest_label_set = max(x_label_master.values(), key=len)
+ax.set_xticks(range(len(longest_label_set)))
+ax.set_xticklabels(longest_label_set, rotation=45)
+ax.set_ylabel("Mean Squared Error")
+ax.set_xlabel("Model Complexity: Leaf Nodes → Ensemble Size")
+ax.legend(title="Transition", title_fontsize=10, loc='upper right')
 plt.tight_layout()
-plt.savefig("CRyPTIC_rf_df_main.png", dpi=300)
+plt.savefig("CRyPTIC_combined_double_descent_curves.png", dpi=300)
 plt.show()
 
-# === Composite Double Descent Figure === #
-plt.figure(figsize=(8, 5), dpi=300)
+# --- Experiment 2: Vary P_leaf for fixed ensemble sizes ---
+P_leaf_values = [2, 5, 10, 20, 50, 100, 200, 300, 500]
+fixed_ensemble_sizes = [1, 5, 10, 50]
+depth_curves = {}
 
-composite_x_axis = [f"L{l}" for l in composite_leaf_nodes] + [f"E{e}" for e in composite_ensemble_sizes]
-plt.plot(range(len(composite_x_axis)), composite_test_errors, color="black", linewidth=2, label="Test Error")
-plt.axvline(interpolation_idx, color='black', linestyle='dashed', linewidth=2, label="Interpolation Threshold")
+for p_ens in fixed_ensemble_sizes:
+    errors = []
+    for p_leaf in P_leaf_values:
+        model = RandomForestRegressor(n_estimators=p_ens, max_leaf_nodes=p_leaf,
+                                      bootstrap=False, random_state=42, n_jobs=-1)
+        err = evaluate(model)
+        errors.append(err)
+    depth_curves[p_ens] = gaussian_filter1d(errors, sigma=1)
 
-plt.title("Double Descent in Trees")
-plt.xlabel("Depth → Ensembling")
-plt.ylabel("MSE")
-plt.xticks(
-    range(0, len(composite_x_axis), max(len(composite_x_axis) // 6, 1)),
-    [composite_x_axis[i] for i in range(0, len(composite_x_axis), max(len(composite_x_axis) // 6, 1))],
-    rotation=20, ha="right", fontsize=10
-)
-plt.legend()
-plt.tight_layout()
-plt.savefig("CRyPTIC_rf_df_composite.png", dpi=300)
+# --- Experiment 3: Vary P_ens for fixed max_leaf_nodes ---
+fixed_tree_depths = [20, 50, 100, 500]
+ensemble_curves = {}
+P_ens_values = [1, 2, 5, 10, 20, 50]
+
+for p_leaf in fixed_tree_depths:
+    errors = []
+    for p_ens in P_ens_values:
+        model = RandomForestRegressor(n_estimators=p_ens, max_leaf_nodes=p_leaf,
+                                      bootstrap=False, random_state=42, n_jobs=-1)
+        err = evaluate(model)
+        errors.append(err)
+    ensemble_curves[p_leaf] = gaussian_filter1d(errors, sigma=1)
+
+# === Plot both depth and ensemble size plots ===
+fig, axes = plt.subplots(1, 2, figsize=(16, 6), sharey=True, constrained_layout=True)
+
+# Panel 1: Varying P_leaf
+for p_ens, errors in depth_curves.items():
+    axes[0].plot(P_leaf_values, errors, marker='o', label=rf"$P_{{\mathrm{{ens}}}}$ = {p_ens}")
+axes[0].set_title("Varying Leaf Nodes (Fixed Ensemble Size)")
+axes[0].set_xlabel(r"$P_{\mathrm{leaf}}$")
+axes[0].set_ylabel("Mean Squared Error")
+axes[0].legend(frameon=True, facecolor='white')
+axes[0].grid(False)
+
+# Panel 2: Varying P_ens
+linestyles = ['-', '--', '-.', ':']
+markers = ['o', 's', 'D', '^']
+offset = np.linspace(-0.3, 0.3, len(fixed_tree_depths))
+
+for i, (p_leaf, errors) in enumerate(ensemble_curves.items()):
+    jittered_x = [x + offset[i] for x in P_ens_values]
+    axes[1].plot(jittered_x, errors,
+                 label=rf"$P_{{\mathrm{{leaf}}}}$ = {p_leaf}",
+                 linestyle=linestyles[i % len(linestyles)],
+                 marker=markers[i % len(markers)],
+                 alpha=0.9)
+axes[1].set_title("Varying Ensemble Size (Fixed Leaf Nodes)")
+axes[1].set_xlabel(r"$P_{\mathrm{ens}}$")
+axes[1].legend(frameon=True, facecolor='white')
+axes[1].grid(False)
+
+plt.savefig("CRyPTIC_curth_experiments_polished.png", dpi=300)
 plt.show()
