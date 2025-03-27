@@ -2,9 +2,10 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from xgboost import XGBRegressor
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.metrics import mean_squared_error
+from scipy.ndimage import gaussian_filter1d
 
 # === Plotting Style === #
 plt.rcParams.update({
@@ -20,7 +21,6 @@ plt.rcParams.update({
 susceptible_dir = "/home/jovyan/DOUBLE_DESCENT/Data/downloaded_susceptible/gunziped_susceptible/csv_susceptible/post_QC_susceptible"
 resistant_dir = "/home/jovyan/DOUBLE_DESCENT/Data/downloaded_resistant/gunziped_resistant/csv_converted/post_QC_resistant"
 
-
 def extract_features_from_csv(file_path):
     df = pd.read_csv(file_path)
     sample_col = df.columns[-1]
@@ -29,132 +29,128 @@ def extract_features_from_csv(file_path):
     df["GT"] = df["GT"].map(genotype_map).fillna(0).astype(int)
     df["DP"] = pd.to_numeric(df["DP"], errors="coerce").fillna(0)
     df["GT_CONF"] = pd.to_numeric(df["GT_CONF"], errors="coerce").fillna(0)
-
     return df[["POS", "GT", "DP", "GT_CONF"]]
 
-# Load and label samples
+# Load & label data
 susceptible_data = [extract_features_from_csv(os.path.join(susceptible_dir, file))
                     for file in os.listdir(susceptible_dir) if file.endswith(".csv")]
-
 susceptible_df = pd.concat(susceptible_data, ignore_index=True)
 susceptible_df["label"] = 0
 
 resistant_data = [extract_features_from_csv(os.path.join(resistant_dir, file))
                   for file in os.listdir(resistant_dir) if file.endswith(".csv")]
-
 resistant_df = pd.concat(resistant_data, ignore_index=True)
 resistant_df["label"] = 1
 
-# Combine data
+# Combine and split
 data = pd.concat([susceptible_df, resistant_df], ignore_index=True)
 data.dropna(inplace=True)
 
-# Set X & y
 X = data.drop(columns=["label"])
 y = data["label"]
+X_train, X_test, y_train, y_test = train_test_split(X, y, stratify=y, test_size=0.3, random_state=42)
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+# Add label noise
+y_train_noisy = y_train.copy()
+flip_indices = np.random.choice(len(y_train_noisy), size=int(0.1 * len(y_train_noisy)), replace=False)
+y_train_noisy.iloc[flip_indices] = 1 - y_train_noisy.iloc[flip_indices]
 
-# === Experiment 1: MSE vs Boosting Rounds === #
-boosting_rounds = np.linspace(10, 300, 20, dtype=int)
-ensemble_sizes_fixed = [1, 5, 10, 50]
-boosting_test_errors = {ens: [] for ens in ensemble_sizes_fixed}
-
-for rounds in boosting_rounds:
-    for ens in ensemble_sizes_fixed:
-        preds = []
-        for i in range(ens):
-            gb = GradientBoostingRegressor(n_estimators=rounds, max_depth=3, learning_rate=0.1,
-                                            subsample=0.8, random_state=42 + i)
-            gb.fit(X_train, y_train)
-            preds.append(gb.predict(X_test))
-        avg_preds = np.mean(preds, axis=0)
-        boosting_test_errors[ens].append(mean_squared_error(y_test, avg_preds))
-
-# === Experiment 2: MSE vs Ensemble Size === #
-ensemble_sizes = np.linspace(1, 100, 15, dtype=int)
+# === Params === #
+P_boost_values = np.linspace(10, 300, 20, dtype=int)
+P_ens_values = np.array([1, 2, 5, 10, 20])
 fixed_boosting_rounds = [20, 50, 100, 200]
-ensemble_test_errors = {boost: [] for boost in fixed_boosting_rounds}
-
-for ens in ensemble_sizes:
-    for boost in fixed_boosting_rounds:
-        preds = []
-        for i in range(ens):
-            gb = GradientBoostingRegressor(n_estimators=boost, max_depth=3, learning_rate=0.1,
-                                            subsample=0.8, random_state=42 + i)
-            gb.fit(X_train, y_train)
-            preds.append(gb.predict(X_test))
-        avg_preds = np.mean(preds, axis=0)
-        ensemble_test_errors[boost].append(mean_squared_error(y_test, avg_preds))
-
-# === Composite Axis: Boosting Rounds → Ensembling === #
-composite_test_errors = []
-composite_x_labels = []
-
-# Step 1: Vary boosting rounds
-for rounds in boosting_rounds:
-    gb = GradientBoostingRegressor(n_estimators=rounds, max_depth=3, learning_rate=0.1,
-                                    subsample=0.8, random_state=42)
-    gb.fit(X_train, y_train)
-    y_pred = gb.predict(X_test)
-    composite_test_errors.append(mean_squared_error(y_test, y_pred))
-    composite_x_labels.append(f"B{rounds}")
-
-# Step 2: Vary ensemble size
 fixed_boost_rounds = 50
-for ens in ensemble_sizes:
+
+# === Composite Descent === #
+composite_errors = []
+composite_labels = []
+
+for rounds in P_boost_values:
+    gb = XGBRegressor(n_estimators=rounds, max_depth=3, learning_rate=0.1,
+                      subsample=0.8, random_state=42, tree_method='hist', verbosity=0)
+    gb.fit(X_train, y_train_noisy)
+    y_pred = gb.predict(X_test)
+    composite_errors.append(mean_squared_error(y_test, y_pred))
+    composite_labels.append(f"B{rounds}")
+
+interp_idx = len(composite_errors) - 1
+
+for ens in P_ens_values:
     preds = []
     for i in range(ens):
-        gb = GradientBoostingRegressor(n_estimators=fixed_boost_rounds, max_depth=3, learning_rate=0.1,
-                                        subsample=0.8, random_state=42 + i)
-        gb.fit(X_train, y_train)
+        gb = XGBRegressor(n_estimators=fixed_boost_rounds, max_depth=3, learning_rate=0.1,
+                          subsample=0.8, random_state=42 + i, tree_method='hist', verbosity=0)
+        gb.fit(X_train, y_train_noisy)
         preds.append(gb.predict(X_test))
     avg_preds = np.mean(preds, axis=0)
-    composite_test_errors.append(mean_squared_error(y_test, avg_preds))
-    composite_x_labels.append(f"E{ens}")
+    composite_errors.append(mean_squared_error(y_test, avg_preds))
+    composite_labels.append(f"E{ens}")
 
-interpolation_idx = np.argmax(composite_test_errors)
+# === Vary Boosting Rounds (Fixed Ens Size) === #
+boost_errors_by_ens = {}
+for ens in P_ens_values:
+    errs = []
+    for rounds in P_boost_values:
+        preds = []
+        for i in range(ens):
+            gb = XGBRegressor(n_estimators=rounds, max_depth=3, learning_rate=0.1,
+                              subsample=0.8, random_state=42 + i, tree_method='hist', verbosity=0)
+            gb.fit(X_train, y_train_noisy)
+            preds.append(gb.predict(X_test))
+        avg_preds = np.mean(preds, axis=0)
+        errs.append(mean_squared_error(y_test, avg_preds))
+    boost_errors_by_ens[ens] = gaussian_filter1d(errs, sigma=1)
 
-# === Data Visualisation === #
-fig, axes = plt.subplots(1, 2, figsize=(14, 5), dpi=300, sharey=True)
+# === Vary Ensemble Size (Fixed Boosting Rounds) === #
+ens_errors_by_boost = {}
+for rounds in fixed_boosting_rounds:
+    errs = []
+    for ens in P_ens_values:
+        preds = []
+        for i in range(ens):
+            gb = XGBRegressor(n_estimators=rounds, max_depth=3, learning_rate=0.1,
+                              subsample=0.8, random_state=42 + i, tree_method='hist', verbosity=0)
+            gb.fit(X_train, y_train_noisy)
+            preds.append(gb.predict(X_test))
+        avg_preds = np.mean(preds, axis=0)
+        errs.append(mean_squared_error(y_test, avg_preds))
+    ens_errors_by_boost[rounds] = gaussian_filter1d(errs, sigma=1)
 
-# Panel 1: Error vs Boosting Rounds
-colors = ["#4C72B0", "#55A868", "#C44E52", "#8172B2"]
-for i, ens in enumerate(ensemble_sizes_fixed):
-    axes[0].plot(boosting_rounds, boosting_test_errors[ens], color=colors[i], linewidth=2, label=f"Trees={ens}")
-axes[0].set_title("Error by Boosting Rounds (Fixed Trees)")
-axes[0].set_xlabel("Boosting Rounds")
-axes[0].set_ylabel("MSE")
+# === Plotting === #
+fig, axes = plt.subplots(1, 3, figsize=(21, 6), constrained_layout=True)
+
+# Panel A: Composite
+axes[0].plot(range(len(composite_errors)), gaussian_filter1d(composite_errors, sigma=1), color='black')
+axes[0].axvline(interp_idx, linestyle='--', color='gray', linewidth=2, label='Transition Point')
+axes[0].set_xticks(range(len(composite_labels)))
+axes[0].set_xticklabels(composite_labels, rotation=45)
+axes[0].set_title("A. Double Descent in XGBoost")
+axes[0].set_xlabel("Model Complexity")
+axes[0].set_ylabel("Mean Squared Error")
 axes[0].legend()
+axes[0].grid(False)
 
-# Panel 2: Error vs Ensemble Size
-colors = ["#DD8452", "#55A868", "#C44E52", "#8172B2"]
-for i, boost in enumerate(fixed_boosting_rounds):
-    axes[1].plot(ensemble_sizes, ensemble_test_errors[boost], color=colors[i], linewidth=2, label=f"Boosting={boost}")
-axes[1].set_title("Error by Ensemble Size (Fixed Boosting)")
-axes[1].set_xlabel("Number of Trees")
+# Panel B: Boosting Rounds
+colors = plt.cm.viridis(np.linspace(0, 1, len(P_ens_values)))
+for i, ens in enumerate(P_ens_values):
+    axes[1].plot(P_boost_values, boost_errors_by_ens[ens], label=fr"$P_{{ens}} = {ens}$", color=colors[i])
+axes[1].set_title("B. Varying $P_{boost}$ (Fixed $P_{ens}$)")
+axes[1].set_xlabel(r"$P_{boost}$")
 axes[1].legend()
+axes[1].grid(False)
 axes[1].set_yticklabels([])
+axes[1].set_ylabel("")
 
-plt.tight_layout()
-plt.savefig("boosting_CRyPTIC_main.png", dpi=300)
-plt.show()
+# Panel C: Ensemble Size
+for i, rounds in enumerate(fixed_boosting_rounds):
+    axes[2].plot(P_ens_values, ens_errors_by_boost[rounds], marker='o',
+                 label=fr"$P_{{boost}} = {rounds}$", linestyle='-', alpha=0.85)
+axes[2].set_title("C. Varying $P_{ens}$ (Fixed $P_{boost}$)")
+axes[2].set_xlabel(r"$P_{ens}$")
+axes[2].legend()
+axes[2].grid(False)
+axes[2].set_yticklabels([])
+axes[2].set_ylabel("")
 
-# === Composite Double Descent Figure === #
-plt.figure(figsize=(8, 5), dpi=300)
-
-plt.plot(range(len(composite_test_errors)), composite_test_errors, color='black', linewidth=2, label="Test Error")
-plt.axvline(interpolation_idx, linestyle='--', color='black', linewidth=2, label='Interpolation Threshold')
-plt.title("Double Descent in Boosting")
-plt.xlabel("Boosting Rounds → Ensembling")
-plt.ylabel("Mean Squared Error")
-
-plt.xticks(
-    range(0, len(composite_x_labels), max(len(composite_x_labels) // 6, 1)),
-    [composite_x_labels[i] for i in range(0, len(composite_x_labels), max(len(composite_x_labels) // 6, 1))],
-    rotation=20, ha="right", fontsize=10
-)
-plt.legend()
-plt.tight_layout()
-plt.savefig("boosting_CRyPTIC_composite.png", dpi=300)
+plt.savefig("xgboost_CRyPTIC_double_descent.png", dpi=300)
 plt.show()
