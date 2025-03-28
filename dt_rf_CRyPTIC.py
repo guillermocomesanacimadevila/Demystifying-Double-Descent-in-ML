@@ -53,14 +53,8 @@ X = data.drop(columns=["label"])
 y = data["label"]
 X_train, X_test, y_train, y_test = train_test_split(X, y, stratify=y, test_size=0.3, random_state=42)
 
-# Add label noise
-y_train_noisy = y_train.copy()
-n_noise = int(0.1 * len(y_train_noisy))
-flip_indices = np.random.choice(len(y_train_noisy), size=n_noise, replace=False)
-y_train_noisy.iloc[flip_indices] = 1 - y_train_noisy.iloc[flip_indices]
-
 def evaluate(model):
-    model.fit(X_train, y_train_noisy)
+    model.fit(X_train, y_train)  
     y_pred = model.predict(X_test)
     return mean_squared_error(y_test, y_pred)
 
