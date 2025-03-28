@@ -50,11 +50,6 @@ X = data.drop(columns=["label"])
 y = data["label"]
 X_train, X_test, y_train, y_test = train_test_split(X, y, stratify=y, test_size=0.3, random_state=42)
 
-# Add label noise
-y_train_noisy = y_train.copy()
-flip_indices = np.random.choice(len(y_train_noisy), size=int(0.1 * len(y_train_noisy)), replace=False)
-y_train_noisy.iloc[flip_indices] = 1 - y_train_noisy.iloc[flip_indices]
-
 # === Params === #
 P_boost_values = np.linspace(10, 300, 20, dtype=int)
 P_ens_values = np.array([1, 2, 5, 10, 20])
@@ -68,7 +63,7 @@ composite_labels = []
 for rounds in P_boost_values:
     gb = XGBRegressor(n_estimators=rounds, max_depth=3, learning_rate=0.1,
                       subsample=0.8, random_state=42, tree_method='hist', verbosity=0)
-    gb.fit(X_train, y_train_noisy)
+    gb.fit(X_train, y_train)
     y_pred = gb.predict(X_test)
     composite_errors.append(mean_squared_error(y_test, y_pred))
     composite_labels.append(f"B{rounds}")
@@ -80,7 +75,7 @@ for ens in P_ens_values:
     for i in range(ens):
         gb = XGBRegressor(n_estimators=fixed_boost_rounds, max_depth=3, learning_rate=0.1,
                           subsample=0.8, random_state=42 + i, tree_method='hist', verbosity=0)
-        gb.fit(X_train, y_train_noisy)
+        gb.fit(X_train, y_train)
         preds.append(gb.predict(X_test))
     avg_preds = np.mean(preds, axis=0)
     composite_errors.append(mean_squared_error(y_test, avg_preds))
@@ -95,7 +90,7 @@ for ens in P_ens_values:
         for i in range(ens):
             gb = XGBRegressor(n_estimators=rounds, max_depth=3, learning_rate=0.1,
                               subsample=0.8, random_state=42 + i, tree_method='hist', verbosity=0)
-            gb.fit(X_train, y_train_noisy)
+            gb.fit(X_train, y_train)
             preds.append(gb.predict(X_test))
         avg_preds = np.mean(preds, axis=0)
         errs.append(mean_squared_error(y_test, avg_preds))
@@ -110,7 +105,7 @@ for rounds in fixed_boosting_rounds:
         for i in range(ens):
             gb = XGBRegressor(n_estimators=rounds, max_depth=3, learning_rate=0.1,
                               subsample=0.8, random_state=42 + i, tree_method='hist', verbosity=0)
-            gb.fit(X_train, y_train_noisy)
+            gb.fit(X_train, y_train)
             preds.append(gb.predict(X_test))
         avg_preds = np.mean(preds, axis=0)
         errs.append(mean_squared_error(y_test, avg_preds))
