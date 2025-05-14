@@ -1,19 +1,50 @@
-## Evaluating Double Descent in Machine Learning
+ 📉 Evaluating Double Descent in Machine Learning
 
-** Workflow conducted in the Cloud Infrastructure for Microbial Bioinformatics (CLIMB) **
+**Project conducted on the [CLIMB](https://www.climb.ac.uk/) Cloud Infrastructure for Microbial Bioinformatics**
 
-** All Bash scripts have been written in a UNIX-based system ** 
+This repository investigates the phenomenon of **double descent** in decision tree-based and gradient boosting models, using both **simulated** and **real-world genomic data** from the CRyPTIC consortium. The pipeline is fully reproducible and executable on UNIX-based systems.
 
-** Python3 (> v.3.12) and a UNIX-based terminal are required for immediate execution ** 
+---
 
-** Execute Bash scripts -> chmod +x file.sh && ./file.sh ** 
+## 🧠 What is Double Descent?
 
-## What is Double Descent? 
-<img width="390" alt="image" src="https://github.com/user-attachments/assets/72c0717a-0e50-4e0b-a1a4-0509d05c1dba" />
+Double descent describes a curious U-turn in the test error of overparameterized models: after the classical bias-variance tradeoff peak, error decreases again with increasing model complexity. We evaluate this using decision trees, random forests, and gradient boosting.
 
+<p align="center">
+  <img width="400" alt="Double Descent" src="https://github.com/user-attachments/assets/72c0717a-0e50-4e0b-a1a4-0509d05c1dba" />
+</p>
 
-## Pipeline Overview
-![image](https://github.com/user-attachments/assets/d70a4fe1-68fa-4541-bceb-c507b3434616)
+---
+
+## ⚙️ Requirements
+
+- **Python 3.12+**
+- **UNIX-based terminal** (e.g., Linux/macOS)
+- `wget`, `bash`, and Python libraries from `requirements.txt`
+
+> 💡 Make Bash scripts executable with:  
+> `chmod +x script.sh && ./script.sh`
+
+---
+
+## 🧬 Dataset
+
+We use high-quality phenotype-genotype data from:
+
+> **CRyPTIC Consortium**, 2022.  
+> *A data compendium associating the genomes of 12,289 Mycobacterium tuberculosis isolates with quantitative resistance phenotypes to 13 antibiotics.*  
+> [PLOS Biology](https://doi.org/10.1371/journal.pbio.3001721)
+
+---
+
+## 📊 Pipeline Overview
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/d70a4fe1-68fa-4541-bceb-c507b3434616" alt="Pipeline Diagram"/>
+</p>
+
+---
+
 
 ### Pipeline Execution (Chronollogically)
 
