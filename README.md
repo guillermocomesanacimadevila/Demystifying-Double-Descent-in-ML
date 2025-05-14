@@ -1,4 +1,4 @@
- 📉 Evaluating Double Descent in Machine Learning
+# 📉 Evaluating Double Descent in Machine Learning
 
 **Project conducted on the [CLIMB](https://www.climb.ac.uk/) Cloud Infrastructure for Microbial Bioinformatics**
 
