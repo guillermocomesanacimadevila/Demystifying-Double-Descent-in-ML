@@ -37,7 +37,7 @@ We use high-quality phenotype-genotype data from:
 
 ---
 
-## 📊 Pipeline Overview
+## 📊 Workflow Overview
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/d70a4fe1-68fa-4541-bceb-c507b3434616" alt="Pipeline Diagram"/>
