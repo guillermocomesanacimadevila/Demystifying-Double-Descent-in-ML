@@ -8,7 +8,7 @@ This repository investigates the phenomenon of **double descent** in decision tr
 
 ## 🧠 What is Double Descent?
 
-Double descent describes a curious U-turn in the test error of overparameterized models: after the classical bias-variance tradeoff peak, error decreases again with increasing model complexity. We evaluate this using decision trees, random forests, and gradient boosting.
+Double descent describes a curious U-turn in the test error of overparameterised models: after the classical bias-variance tradeoff peak, error decreases again with increasing model complexity. We evaluate this using decision trees, random forests, and gradient boosting.
 
 <p align="center">
   <img width="400" alt="Double Descent" src="https://github.com/user-attachments/assets/72c0717a-0e50-4e0b-a1a4-0509d05c1dba" />
