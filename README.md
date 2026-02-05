@@ -1,4 +1,4 @@
-# 📉 Evaluating Double Descent in Machine Learning
+# Evaluating Double Descent in Machine Learning
 
 **Project conducted on the [CLIMB](https://www.climb.ac.uk/) Cloud Infrastructure for Microbial Bioinformatics**
 
@@ -6,7 +6,7 @@ This repository investigates the phenomenon of **double descent** in decision tr
 
 ---
 
-## 🧠 What is Double Descent?
+## What is Double Descent?
 
 Double descent describes a curious U-turn in the test error of overparameterised models: after the classical bias-variance tradeoff peak, error decreases again with increasing model complexity. We evaluate this using decision trees, random forests, and gradient boosting.
 
@@ -16,18 +16,18 @@ Double descent describes a curious U-turn in the test error of overparameterised
 
 ---
 
-## ⚙️ Requirements
+## Requirements
 
 - **Python 3.12+**
 - **UNIX-based terminal** (e.g., Linux/macOS)
 - `wget`, `bash`, and Python libraries from `requirements.txt`
 
-> 💡 Make Bash scripts executable with:  
+>  Make Bash scripts executable with:  
 > `chmod +x script.sh && ./script.sh`
 
 ---
 
-## 🧬 Dataset
+## Dataset
 
 We use high-quality phenotype-genotype data from:
 
@@ -37,7 +37,7 @@ We use high-quality phenotype-genotype data from:
 
 ---
 
-## 📊 Workflow Overview
+## Workflow Overview
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/d70a4fe1-68fa-4541-bceb-c507b3434616" alt="Pipeline Diagram"/>
@@ -45,7 +45,7 @@ We use high-quality phenotype-genotype data from:
 
 ---
 
-## 🧪 Execution Workflow
+## Execution Workflow
 
 This section outlines the complete chronological pipeline to evaluate double descent using CRyPTIC data and simulated models.
 
@@ -106,7 +106,7 @@ python gboost_CRyPTIC.py         # Gradient boosting curves
 
 ---
 
-## 📚 References
+## References
 
 CRyPTIC, 2022. A data compendium associating the genomes of 12,289 Mycobacterium tuberculosis isolates with quantitative resistance phenotypes to 13 antibiotics [Online]. PLOS Biology, 20(8), p.e3001721. Available from: https://doi.org/10.1371/journal.pbio.3001721.
 
